@@ -1,0 +1,46 @@
+# REA - im gesamten LAN erreichbar
+# ACHTUNG: Der MCP-Endpunkt ist in dieser Variante ungeschuetzt.
+# Erreichbar unter: http://<SERVER-IP>:8075/mcp
+
+services:
+  rea:
+    image: ghcr.io/jbkunama1/hai.rea-docker:latest
+    container_name: rea
+    restart: unless-stopped
+
+    environment:
+      REA_HTTP_PORT: "8075"
+
+    ports:
+      # LAN-weit erreichbar
+      - "8075:8075"
+
+    volumes:
+      - /opt/rea/targets:/work:ro
+      - /opt/rea/data:/home/rea
+      - /opt/rea/tools:/opt/rea-tools
+
+    tmpfs:
+      - /tmp:rw,nosuid,size=4g
+
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+    networks:
+      - highfishNetwork
+
+networks:
+  highfishNetwork:
+    external: true
