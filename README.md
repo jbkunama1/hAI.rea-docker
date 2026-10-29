@@ -9,14 +9,26 @@ Das GitHub-Action-Workflow:
 - prueft taeglich die aktuelle `rea-agents`-Version auf npm
 - aktualisiert bei einer neuen Version `REA_VERSION`, committet und baut automatisch
 
+## Standard: LAN-Modus
+
+Fuer die **erleichterte Ersteinrichtung** ist `compose-lan.yml` die Standardvariante.
+
+Damit ist REA direkt im Heimnetz erreichbar:
+
+```text
+http://<SERVER-IP>:8075/mcp
+```
+
+Das ermoeglicht eine schnelle Anbindung an AnythingMCP, Claude Code, Codex, Cursor oder andere MCP-Clients, ohne zunaechst einen SSH-Tunnel einrichten zu muessen.
+
+**Wichtig:** Der REA-MCP-Endpunkt ist in dieser Variante ungeschuetzt. Verwende sie daher nur in einem vertrauenswuerdigen Heimnetz.
+
 ## Compose-Varianten
 
-Es gibt zwei fertige Portainer-/Compose-Dateien:
-
-| Datei | Port-Bindung | Erreichbarkeit |
-|---|---|---|
-| `compose-internal.yml` | `127.0.0.1:8075:8075` | Nur der Docker-Host selbst |
-| `compose-lan.yml` | `8075:8075` | Alle Geraete im LAN |
+| Datei | Port-Bindung | Erreichbarkeit | Empfehlung |
+|---|---|---|---|
+| `compose-lan.yml` | `8075:8075` | Alle Geraete im LAN | Standard fuer die Ersteinrichtung |
+| `compose-internal.yml` | `127.0.0.1:8075:8075` | Nur der Docker-Host selbst | Sicherere Dauerloesung |
 
 Beide verwenden:
 
@@ -44,16 +56,20 @@ sudo chown -R 1000:1000 /opt/rea/data /opt/rea/tools
 ## Portainer verwenden
 
 1. **Stacks > + Add stack**
-2. Einen Namen vergeben, z. B. `rea`
-3. Entweder `compose-internal.yml` oder `compose-lan.yml` in den Web Editor kopieren
+2. Namen vergeben, z. B. `rea`
+3. Fuer die erleichterte Ersteinrichtung `compose-lan.yml` in den Web Editor kopieren
 4. **Deploy the stack** klicken
 
 Alternativ per CLI:
 
 ```bash
-docker compose -f compose-internal.yml up -d
-# oder
 docker compose -f compose-lan.yml up -d
+```
+
+Fuer den abgesicherten Betrieb:
+
+```bash
+docker compose -f compose-internal.yml up -d
 ```
 
 ## AnythingMCP anbinden
@@ -111,6 +127,8 @@ Das Repository enthaelt `.github/workflows/build.yml`. Es baut und published das
 ```text
 ghcr.io/jbkunama1/hai.rea-docker
 ```
+
+Der Workflow baut ausschliesslich das Docker-Image. Er deployt keinen Stack. Fuer die erleichterte Ersteinrichtung ist im Repository `compose-lan.yml` als Standard-Deployment-Variante hinterlegt.
 
 Im GitHub-Repo unter **Settings > Actions > General > Workflow permissions** muss **Read and write permissions** aktiviert sein.
 
