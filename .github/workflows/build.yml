@@ -1,0 +1,95 @@
+name: Build and publish REA image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "entrypoint.sh"
+      - "REA_VERSION"
+      - ".github/workflows/build.yml"
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  update-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read pinned REA version
+        id: pinned
+        run: |
+          PINNED="$(tr -d '[:space:]' < REA_VERSION)"
+          echo "version=${PINNED}" >> "$GITHUB_OUTPUT"
+
+      - name: Check latest official REA release
+        id: latest
+        run: |
+          LATEST="$(npm view rea-agents dist-tags.latest)"
+          echo "version=${LATEST}" >> "$GITHUB_OUTPUT"
+          echo "Latest rea-agents: ${LATEST}"
+          echo "Pinned rea-agents: ${{ steps.pinned.outputs.version }}"
+
+      - name: Update pinned version
+        id: update
+        if: steps.latest.outputs.version != steps.pinned.outputs.version
+        run: |
+          NEW="${{ steps.latest.outputs.version }}"
+          echo "${NEW}" > REA_VERSION
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "version=${NEW}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add REA_VERSION
+          git commit -m "chore: update rea-agents to ${{ steps.latest.outputs.version }}"
+          git push
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.update.outputs.version || steps.pinned.outputs.version }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            REA_VERSION=${{ steps.update.outputs.version || steps.pinned.outputs.version }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
