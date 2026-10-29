@@ -1,5 +1,9 @@
 name: Build and publish REA image
 
+# Hinweis: Der Workflow baut und published ausschliesslich das Docker-Image.
+# Fuer die erleichterte Ersteinrichtung ist compose-lan.yml die Standard-Deployment-Variante.
+# Der LAN-Modus stellt den MCP-Endpunkt ohne Authentifizierung im Heimnetz bereit.
+
 on:
   push:
     branches: [main]
